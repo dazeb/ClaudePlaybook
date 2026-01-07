@@ -13,30 +13,6 @@ Standard AI agents often fail on complex tasks because they try to "one-shot" th
 - **The Initializer**: Spends its entire context window planning, scaffolding, and creating a machine-readable roadmap (`tests.json`).
 - **The Worker**: Focused, incremental sessions that implement exactly one feature, verify it end-to-end, and persist the state for the next session.
 
-## 🔄 How Long-Running Agents Work
-
-```mermaid
-graph TD
-    subgraph "Phase 1: Environment Architecture"
-    A[User Prompt] --> B[Project Initializer Agent]
-    B --> C["Roadmap (tests.json)"]
-    B --> D["Infrastructure (init.sh)"]
-    B --> E["Memory (progress.txt)"]
-    end
-
-    subgraph "Phase 2: The Cognitive Loop"
-    C & D & E --> F[Worker Agent Session]
-    F --> G["Orient: Read progress + git log"]
-    G --> H["Execute: Run init.sh + test baseline"]
-    H --> I["Build: Implement 1 feature"]
-    I --> J["Verify: Run E2E Tests"]
-    J --> K["Persist: Update state + Git commit"]
-    end
-
-    K -- "Next Feature" --> F
-    K -- "Complete" --> L[Project Delivered]
-```
-
 ## 📂 Agent Directory
 
 Click an agent name to view its full role definition, capabilities, and anti-patterns.
