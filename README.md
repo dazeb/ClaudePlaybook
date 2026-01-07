@@ -1,5 +1,7 @@
 # Claude AI Agents Collection
 
+<img width="1000" height="487" alt="Untitled-1" src="https://github.com/user-attachments/assets/00beae35-8872-4707-ba5c-36894976a6e7" />
+
 A comprehensive library of 34 specialized AI agent role definitions for software development studios, covering the entire software development lifecycle from design to deployment.
 
 ## Overview
