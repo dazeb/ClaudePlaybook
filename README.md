@@ -577,19 +577,19 @@ Multiple agents can work together on complex features:
 ```markdown
 # Example: Building a payment system
 
-1. @Backend Architect
+1. @backend-architect
    → Design payment API contract and database schema
    → Document in claude-progress.txt
 
-2. @Frontend Developer
+2. @frontend-developer
    → Build payment form UI with validation
    → Integrate with API contract
 
-3. @API Tester
+3. @api-tester
    → Write contract tests for payment endpoints
    → Test auth boundaries and edge cases
 
-4. @DevOps Automator
+4. @devops-automator
    → Set up Stripe webhook handling in production
    → Configure environment variables and secrets
 ```
@@ -666,7 +666,7 @@ Before deploying agents to your team, measure their impact:
 
 **1. Create 3 Test Scenarios**
 
-Example for @Frontend Developer:
+Example for @frontend-developer:
 - Scenario 1: "Build a login form with email/password validation"
 - Scenario 2: "Create a responsive dashboard with 4 metric cards"
 - Scenario 3: "Fix accessibility issues in the checkout flow"
