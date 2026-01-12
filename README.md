@@ -4,12 +4,16 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![43 Agents](https://img.shields.io/badge/Agents-43-blue.svg)]()
+[![Works with Claude Code](https://img.shields.io/badge/Claude_Code-Compatible-blue.svg)]()
+[![Works with OpenCode](https://img.shields.io/badge/OpenCode-Compatible-orange.svg)]()
 
 ---
 
 ## ⚡ Quick Start (60 seconds)
 
 **What is this?** A collection of specialized "expert personas" that make Claude better at specific development tasks.
+
+**Works with:** Claude Code CLI, OpenCode, Claude Web/Desktop
 
 **How does it work?**
 1. Clone this repo into your project
@@ -162,6 +166,30 @@ git clone https://github.com/dazeb/Long-Running-AI-Agents.git .claude
 # Copy content → Paste into Claude → Start chatting
 ```
 
+### Option 3: OpenCode
+OpenCode uses a different folder structure (`.opencode/agent/` instead of `.claude/agents/`).
+
+**Quick setup:**
+```bash
+# Clone the repo
+git clone https://github.com/dazeb/Long-Running-AI-Agents.git
+
+# Rename folders for OpenCode
+mv Long-Running-AI-Agents/.claude .opencode
+mv .opencode/agents .opencode/agent
+
+# Clean up
+rm -rf Long-Running-AI-Agents
+
+# Agents are now auto-discovered in OpenCode!
+# Use them the same way: "@react-nextjs-specialist, ..."
+```
+
+**One-liner setup:**
+```bash
+git clone https://github.com/dazeb/Long-Running-AI-Agents.git && mv Long-Running-AI-Agents/.claude .opencode && mv .opencode/agents .opencode/agent && rm -rf Long-Running-AI-Agents
+```
+
 ---
 
 ## 📱 Optional: Telegram Notifier
@@ -222,6 +250,9 @@ Absolutely! Fork and customize to match your stack and preferences.
 
 **Q: Do agents work with Claude Web (not CLI)?**
 Yes! Copy any agent's content into your conversation or system prompt.
+
+**Q: Can I use these with OpenCode?**
+Yes! See Option 3 in the "How to Use" section for setup instructions. You'll need to rename folders: `.claude` → `.opencode` and `agents` → `agent`.
 
 **Q: What's the "Project Initializer" agent?**
 It creates project structure and tracking files for complex projects. Optional for simple tasks.
