@@ -21,6 +21,16 @@
 3. Claude now has deep expertise in that domain
 
 **Try it now:**
+
+### 🏪 Option A: Marketplace Installer (Easiest)
+```bash
+curl -fsSL https://raw.githubusercontent.com/dazeb/Long-Running-AI-Agents/main/install.sh | bash
+```
+Interactive installer lets you choose which agents to install.
+
+📚 **[View Full Marketplace Documentation →](MARKETPLACE.md)**
+
+### Option B: Install Everything
 ```bash
 # Clone into your project
 git clone https://github.com/dazeb/Long-Running-AI-Agents.git .claude
