@@ -6,7 +6,34 @@
 
 ## ⚡ Quick Install
 
-### One-Command Installation (Recommended)
+### Method 1: Official Plugin Marketplace (Best)
+
+**Using Claude Code's built-in plugin system:**
+
+```bash
+# Add marketplace to Claude Code
+/plugin marketplace add https://github.com/dazeb/Long-Running-AI-Agents
+
+# Install by category
+/plugin install web-development-agents@long-running-ai-agents
+/plugin install engineering-agents@long-running-ai-agents
+/plugin install design-agents@long-running-ai-agents
+
+# Or install essentials bundle (recommended for starters)
+/plugin install essentials-bundle@long-running-ai-agents
+
+# Browse all available plugins
+/plugin > Discover
+```
+
+**Benefits:**
+- ✅ Native Claude Code integration
+- ✅ Automatic updates
+- ✅ Version management
+- ✅ Browse and discover in UI
+- ✅ No manual file management
+
+### Method 2: CLI Installer
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dazeb/Long-Running-AI-Agents/main/install.sh | bash

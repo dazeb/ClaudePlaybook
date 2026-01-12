@@ -22,7 +22,23 @@
 
 **Try it now:**
 
-### 🏪 Option A: Marketplace Installer (Easiest)
+### 🔌 Option A: Plugin Marketplace (Best - Official Integration)
+```bash
+# Add the marketplace to Claude Code
+/plugin marketplace add https://github.com/dazeb/Long-Running-AI-Agents
+
+# Install specific category
+/plugin install web-development-agents@long-running-ai-agents
+/plugin install engineering-agents@long-running-ai-agents
+
+# Or install the essentials bundle (recommended for starters)
+/plugin install essentials-bundle@long-running-ai-agents
+
+# Browse all available plugins
+/plugin > Discover
+```
+
+### 🏪 Option B: CLI Installer (Quick & Easy)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dazeb/Long-Running-AI-Agents/main/install.sh | bash
 ```
@@ -30,7 +46,7 @@ Interactive installer lets you choose which agents to install.
 
 📚 **[View Full Marketplace Documentation →](MARKETPLACE.md)**
 
-### Option B: Install Everything
+### Option C: Manual Install
 ```bash
 # Clone into your project
 git clone https://github.com/dazeb/Long-Running-AI-Agents.git .claude
