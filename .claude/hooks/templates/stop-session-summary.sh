@@ -44,9 +44,19 @@ SUMMARY+="### 📝 Files Modified
 
 "
 
+# Cache git operations to avoid redundant calls
+IS_GIT_REPO=false
+GIT_STATUS_OUTPUT=""
+
 if git rev-parse --git-dir > /dev/null 2>&1; then
-  # Get all modified files (staged and unstaged)
-  CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | head -20)
+  IS_GIT_REPO=true
+  # Cache git status output for reuse
+  GIT_STATUS_OUTPUT=$(git status --porcelain)
+fi
+
+if [ "$IS_GIT_REPO" = true ]; then
+  # Use cached git status output
+  CHANGED_FILES=$(echo "$GIT_STATUS_OUTPUT" | awk '{print $2}' | head -20)
 
   if [ -n "$CHANGED_FILES" ]; then
     while IFS= read -r file; do
@@ -80,7 +90,7 @@ SUMMARY+="### 📦 Commits Made
 
 "
 
-if git rev-parse --git-dir > /dev/null 2>&1; then
+if [ "$IS_GIT_REPO" = true ]; then
   # Get commits from last hour (approximate session duration)
   RECENT_COMMITS=$(git log --since="1 hour ago" --oneline 2>/dev/null)
 
@@ -106,7 +116,7 @@ SUMMARY+="### 📊 Statistics
 
 "
 
-if git rev-parse --git-dir > /dev/null 2>&1; then
+if [ "$IS_GIT_REPO" = true ]; then
   # Lines added/removed
   STATS=$(git diff --shortstat 2>/dev/null)
   if [ -n "$STATS" ]; then
@@ -117,17 +127,29 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
 "
   fi
 
-  # File type breakdown
+  # File type breakdown - optimized with single pass
   SUMMARY+="
 **File Types Modified:**
 "
 
-  git status --porcelain | awk '{print $2}' | while read -r file; do
-    echo "${file##*.}"
-  done | sort | uniq -c | sort -rn | head -5 | while read -r count ext; do
-    SUMMARY+="- .$ext files: $count
+  # Use cached git status output and optimize with single awk command
+  if [ -n "$GIT_STATUS_OUTPUT" ]; then
+    FILE_TYPE_STATS=$(echo "$GIT_STATUS_OUTPUT" | awk '{print $2}' | \
+      awk -F. '{if (NF>1) print $NF; else print "no-extension"}' | \
+      sort | uniq -c | sort -rn | head -5)
+
+    if [ -n "$FILE_TYPE_STATS" ]; then
+      while read -r count ext; do
+        if [ "$ext" = "no-extension" ]; then
+          SUMMARY+="- files without extension: $count
 "
-  done
+        else
+          SUMMARY+="- .$ext files: $count
+"
+        fi
+      done <<< "$FILE_TYPE_STATS"
+    fi
+  fi
 fi
 
 SUMMARY+="
@@ -142,9 +164,15 @@ if [ -f "tests.json" ]; then
 
 "
 
-  # Count passing vs failing tests
-  PASSING=$(grep -o '"passes": true' tests.json 2>/dev/null | wc -l || echo "0")
-  FAILING=$(grep -o '"passes": false' tests.json 2>/dev/null | wc -l || echo "0")
+  # Count passing vs failing tests - optimized with single grep call
+  PASSES_DATA=$(grep -o '"passes": \(true\|false\)' tests.json 2>/dev/null || echo "")
+  if [ -n "$PASSES_DATA" ]; then
+    PASSING=$(echo "$PASSES_DATA" | grep -c "true" || echo "0")
+    FAILING=$(echo "$PASSES_DATA" | grep -c "false" || echo "0")
+  else
+    PASSING=0
+    FAILING=0
+  fi
   TOTAL=$((PASSING + FAILING))
 
   if [ "$TOTAL" -gt 0 ]; then
@@ -234,10 +262,16 @@ echo ""
 
 NOTIFIER=".claude/tools/telegram-notifier/telegram-notifier.js"
 if [ -f "$NOTIFIER" ] && [ -x "$NOTIFIER" ]; then
-  # Extract key stats for notification
-  if git rev-parse --git-dir > /dev/null 2>&1; then
-    FILES_CHANGED=$(git status --porcelain | wc -l)
-    COMMITS_MADE=$(git log --since="1 hour ago" --oneline 2>/dev/null | wc -l)
+  # Extract key stats for notification (reuse cached data)
+  if [ "$IS_GIT_REPO" = true ]; then
+    # Use cached git status output
+    FILES_CHANGED=$(echo "$GIT_STATUS_OUTPUT" | wc -l)
+    # Reuse commits data if available, otherwise fetch
+    if [ -n "$RECENT_COMMITS" ]; then
+      COMMITS_MADE=$(echo "$RECENT_COMMITS" | wc -l)
+    else
+      COMMITS_MADE=$(git log --since="1 hour ago" --oneline 2>/dev/null | wc -l)
+    fi
 
     MESSAGE="🎉 Claude Code session completed!
 
