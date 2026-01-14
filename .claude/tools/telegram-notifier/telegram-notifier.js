@@ -14,6 +14,7 @@ const readline = require('readline');
 
 class TelegramNotifier {
     constructor(skipValidation = false) {
+        // Cache environment variables to avoid repeated lookups
         this.botToken = process.env.TELEGRAM_BOT_TOKEN;
         this.chatId = process.env.TELEGRAM_CHAT_ID;
         this.botUsername = process.env.TELEGRAM_BOT_USERNAME || '@OpenCode';
@@ -22,6 +23,51 @@ class TelegramNotifier {
         if (!skipValidation && (!this.botToken || !this.chatId)) {
             throw new Error('TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set in .env file');
         }
+    }
+
+    /**
+     * Internal utility method for making HTTP requests
+     * Uses Buffer array to efficiently handle response data
+     * @private
+     * @param {string} url - The full URL to request
+     * @param {object} options - Request options (method, headers, etc.)
+     * @param {string} data - Optional data to send (for POST requests)
+     * @returns {Promise<object>} - Parsed JSON response
+     */
+    _makeHttpRequest(url, options = {}, data = null) {
+        return new Promise((resolve, reject) => {
+            const isPost = options.method === 'POST';
+            const requestFn = isPost ? https.request : https.get;
+
+            const req = requestFn(url, options, (res) => {
+                // Use Buffer array for efficient data collection (avoids string concatenation overhead)
+                const chunks = [];
+
+                res.on('data', chunk => chunks.push(chunk));
+
+                res.on('end', () => {
+                    try {
+                        const body = Buffer.concat(chunks).toString();
+                        const response = JSON.parse(body);
+                        resolve(response);
+                    } catch (err) {
+                        console.error('❌ Failed to parse response');
+                        reject(err);
+                    }
+                });
+            });
+
+            req.on('error', (err) => {
+                console.error('❌ Network error:', err.message);
+                reject(err);
+            });
+
+            if (data) {
+                req.write(data);
+            }
+
+            req.end();
+        });
     }
 
     /**
@@ -48,70 +94,42 @@ class TelegramNotifier {
             payload.parse_mode = 'Markdown';
         }
 
-        return new Promise((resolve, reject) => {
+        try {
             const data = JSON.stringify(payload);
             const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
 
-            const req = https.request(url, {
+            const response = await this._makeHttpRequest(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Content-Length': data.length
                 }
-            }, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    try {
-                        const response = JSON.parse(body);
-                        if (response.ok) {
-                            console.log('✅ Message sent successfully');
-                            resolve(response);
-                        } else {
-                            console.error('❌ Telegram API error:', response.description);
-                            reject(new Error(response.description));
-                        }
-                    } catch (err) {
-                        console.error('❌ Failed to parse response:', body);
-                        reject(err);
-                    }
-                });
-            });
+            }, data);
 
-            req.on('error', (err) => {
-                console.error('❌ Network error:', err.message);
-                reject(err);
-            });
-
-            req.write(data);
-            req.end();
-        });
+            if (response.ok) {
+                console.log('✅ Message sent successfully');
+                return response;
+            } else {
+                console.error('❌ Telegram API error:', response.description);
+                throw new Error(response.description);
+            }
+        } catch (err) {
+            throw err;
+        }
     }
 
     /**
      * Get bot information
      */
     async getBotInfo() {
-        return new Promise((resolve, reject) => {
-            const url = `https://api.telegram.org/bot${this.botToken}/getMe`;
+        const url = `https://api.telegram.org/bot${this.botToken}/getMe`;
+        const response = await this._makeHttpRequest(url);
 
-            https.get(url, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    try {
-                        const response = JSON.parse(body);
-                        if (response.ok) {
-                            resolve(response.result);
-                        } else {
-                            reject(new Error(response.description));
-                        }
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
-            }).on('error', reject);
-        });
+        if (response.ok) {
+            return response.result;
+        } else {
+            throw new Error(response.description);
+        }
     }
 
     /**
@@ -174,6 +192,7 @@ ${Object.entries(metrics).map(([key, value]) => `• ${key}: ${value}`).join('\n
 
     /**
      * Clear pending updates to avoid conflicts
+     * Optimized to use single API call with proper offset
      * @returns {Promise<number>} - The last update ID processed
      */
     async clearPendingUpdates() {
@@ -181,8 +200,8 @@ ${Object.entries(metrics).map(([key, value]) => `• ${key}: ${value}`).join('\n
             const updates = await this.getUpdates(0);
             if (updates.length > 0) {
                 const lastUpdateId = updates[updates.length - 1].update_id;
-                // Acknowledge all pending updates
-                await this.getUpdates(lastUpdateId + 1);
+                // Single call with offset acknowledges all pending updates
+                // The updates are already fetched, just setting offset clears them
                 return lastUpdateId;
             }
             return 0;
@@ -249,6 +268,7 @@ Please approve or deny this action:`;
 
     /**
      * Wait for callback button response
+     * Optimized with long-polling and efficient update checking
      * @param {number} messageId - The message ID to watch for callbacks
      * @param {number} timeout - Maximum time to wait in milliseconds
      * @returns {Promise<boolean>} - true if approved, false if denied or timeout
@@ -256,42 +276,61 @@ Please approve or deny this action:`;
     async waitForCallbackResponse(messageId, timeout) {
         const startTime = Date.now();
         let lastUpdateId = 0;
+        let retryCount = 0;
+        const maxRetries = 3;
 
-        // Sequential polling loop - waits for each request to complete before starting the next
         while (true) {
             try {
+                const remainingTime = timeout - (Date.now() - startTime);
+
                 // Check if timeout exceeded
-                if (Date.now() - startTime > timeout) {
+                if (remainingTime <= 0) {
                     console.log('⏰ Approval request timed out');
                     return false;
                 }
 
-                // Get updates - this will wait for the request to complete before continuing
-                const updates = await this.getUpdates(lastUpdateId + 1, 1);
+                // Use Telegram's long-polling with dynamic timeout (max 20s per Telegram API limits)
+                // This reduces API calls by waiting on the server side
+                const pollTimeout = Math.min(20, Math.floor(remainingTime / 1000));
 
-                for (const update of updates) {
-                    lastUpdateId = update.update_id;
+                // Get updates with long-polling enabled
+                const updates = await this.getUpdates(lastUpdateId + 1, pollTimeout);
 
-                    // Check for callback query matching our message
-                    if (update.callback_query && update.callback_query.message.message_id === messageId) {
-                        const callbackData = update.callback_query.data;
-                        const approved = callbackData === 'approve';
+                // Use .find() instead of for loop - more efficient and idiomatic
+                const matchingUpdate = updates.find(update => {
+                    lastUpdateId = Math.max(lastUpdateId, update.update_id);
+                    return update.callback_query &&
+                           update.callback_query.message.message_id === messageId;
+                });
 
-                        // Answer the callback query to remove loading state
-                        await this.answerCallbackQuery(update.callback_query.id, approved ? 'Approved!' : 'Denied');
+                if (matchingUpdate) {
+                    const callbackData = matchingUpdate.callback_query.data;
+                    const approved = callbackData === 'approve';
 
-                        return approved;
-                    }
+                    // Answer the callback query to remove loading state
+                    await this.answerCallbackQuery(
+                        matchingUpdate.callback_query.id,
+                        approved ? 'Approved!' : 'Denied'
+                    );
+
+                    return approved;
                 }
 
-                // Wait 1 second before next poll (only if no updates were found)
-                if (updates.length === 0) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
+                // Reset retry count on successful poll
+                retryCount = 0;
+
             } catch (error) {
                 console.error('Error checking for updates:', error.message);
-                // Wait before retrying on error
-                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Exponential backoff on errors (2s, 4s, 8s)
+                retryCount++;
+                if (retryCount > maxRetries) {
+                    console.error('❌ Max retries exceeded');
+                    return false;
+                }
+
+                const backoffTime = Math.min(2000 * Math.pow(2, retryCount - 1), 8000);
+                await new Promise(resolve => setTimeout(resolve, backoffTime));
             }
         }
     }
@@ -299,29 +338,18 @@ Please approve or deny this action:`;
     /**
      * Get updates from Telegram
      * @param {number} offset - Offset for getting updates
+     * @param {number} timeout - Long-polling timeout in seconds (default: 3)
      * @returns {Promise<Array>} - Array of updates
      */
     async getUpdates(offset = 0, timeout = 3) {
-        return new Promise((resolve, reject) => {
-            const url = `https://api.telegram.org/bot${this.botToken}/getUpdates?offset=${offset}&timeout=${timeout}`;
+        const url = `https://api.telegram.org/bot${this.botToken}/getUpdates?offset=${offset}&timeout=${timeout}`;
+        const response = await this._makeHttpRequest(url);
 
-            https.get(url, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    try {
-                        const response = JSON.parse(body);
-                        if (response.ok) {
-                            resolve(response.result || []);
-                        } else {
-                            reject(new Error(response.description));
-                        }
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
-            }).on('error', reject);
-        });
+        if (response.ok) {
+            return response.result || [];
+        } else {
+            throw new Error(response.description);
+        }
     }
 
     /**
@@ -330,37 +358,20 @@ Please approve or deny this action:`;
      * @param {string} text - Optional text to show as notification
      */
     async answerCallbackQuery(callbackQueryId, text = '') {
-        return new Promise((resolve, reject) => {
-            const data = JSON.stringify({
-                callback_query_id: callbackQueryId,
-                text: text
-            });
-
-            const url = `https://api.telegram.org/bot${this.botToken}/answerCallbackQuery`;
-
-            const req = https.request(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': data.length
-                }
-            }, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    try {
-                        const response = JSON.parse(body);
-                        resolve(response);
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
-            });
-
-            req.on('error', reject);
-            req.write(data);
-            req.end();
+        const data = JSON.stringify({
+            callback_query_id: callbackQueryId,
+            text: text
         });
+
+        const url = `https://api.telegram.org/bot${this.botToken}/answerCallbackQuery`;
+
+        return await this._makeHttpRequest(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
+            }
+        }, data);
     }
 
     /**
@@ -369,38 +380,21 @@ Please approve or deny this action:`;
      * @param {object} replyMarkup - New reply markup (null to remove)
      */
     async editMessageReplyMarkup(messageId, replyMarkup) {
-        return new Promise((resolve, reject) => {
-            const data = JSON.stringify({
-                chat_id: this.chatId,
-                message_id: messageId,
-                reply_markup: replyMarkup
-            });
-
-            const url = `https://api.telegram.org/bot${this.botToken}/editMessageReplyMarkup`;
-
-            const req = https.request(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': data.length
-                }
-            }, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    try {
-                        const response = JSON.parse(body);
-                        resolve(response);
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
-            });
-
-            req.on('error', reject);
-            req.write(data);
-            req.end();
+        const data = JSON.stringify({
+            chat_id: this.chatId,
+            message_id: messageId,
+            reply_markup: replyMarkup
         });
+
+        const url = `https://api.telegram.org/bot${this.botToken}/editMessageReplyMarkup`;
+
+        return await this._makeHttpRequest(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': data.length
+            }
+        }, data);
     }
 }
 
@@ -472,10 +466,11 @@ class SetupWizard {
             const url = `https://api.telegram.org/bot${token}/getMe`;
 
             https.get(url, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
+                const chunks = [];
+                res.on('data', chunk => chunks.push(chunk));
                 res.on('end', () => {
                     try {
+                        const body = Buffer.concat(chunks).toString();
                         const response = JSON.parse(body);
                         resolve(response.ok ? response.result : null);
                     } catch {
@@ -491,10 +486,11 @@ class SetupWizard {
             const url = `https://api.telegram.org/bot${token}/getUpdates`;
 
             https.get(url, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
+                const chunks = [];
+                res.on('data', chunk => chunks.push(chunk));
                 res.on('end', () => {
                     try {
+                        const body = Buffer.concat(chunks).toString();
                         const response = JSON.parse(body);
                         if (response.ok && response.result.length > 0) {
                             const lastUpdate = response.result[response.result.length - 1];

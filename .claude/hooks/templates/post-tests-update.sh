@@ -51,13 +51,12 @@ COMPLETION_KEYWORDS=(
   "✓"
 )
 
-# Check tool output for completion keywords
-for keyword in "${COMPLETION_KEYWORDS[@]}"; do
-  if echo "$TOOL_OUTPUT" | grep -qi "$keyword"; then
-    TASK_COMPLETE=true
-    KEYWORDS_FOUND="$KEYWORDS_FOUND $keyword"
-  fi
-done
+# Check tool output for completion keywords - optimized with single regex
+if echo "$TOOL_OUTPUT" | grep -qiE "completed|finished|done|passing|fixed|implemented|working|successful|resolved|✅|✓"; then
+  TASK_COMPLETE=true
+  # Extract which keywords were found for reporting
+  KEYWORDS_FOUND=$(echo "$TOOL_OUTPUT" | grep -oiE "completed|finished|done|passing|fixed|implemented|working|successful|resolved|✅|✓" | head -3 | tr '\n' ' ')
+fi
 
 # If no completion detected, exit silently
 if [ "$TASK_COMPLETE" = false ]; then
@@ -72,10 +71,18 @@ echo ""
 echo "🔍 Task completion detected! Keywords found:$KEYWORDS_FOUND"
 echo ""
 
-# Count current task status
+# Count current task status - optimized with single pass through file
 TOTAL_TASKS=$(grep -c '"task":' "$TESTS_JSON" 2>/dev/null || echo "0")
-PASSING_TASKS=$(grep -c '"passes": true' "$TESTS_JSON" 2>/dev/null || echo "0")
-FAILING_TASKS=$(grep -c '"passes": false' "$TESTS_JSON" 2>/dev/null || echo "0")
+
+# Single grep for both passing and failing counts
+PASSES_DATA=$(grep -o '"passes": \(true\|false\)' "$TESTS_JSON" 2>/dev/null || echo "")
+if [ -n "$PASSES_DATA" ]; then
+  PASSING_TASKS=$(echo "$PASSES_DATA" | grep -c "true" || echo "0")
+  FAILING_TASKS=$(echo "$PASSES_DATA" | grep -c "false" || echo "0")
+else
+  PASSING_TASKS=0
+  FAILING_TASKS=0
+fi
 
 echo "📊 Current Status:"
 echo "   Total tasks: $TOTAL_TASKS"
@@ -83,8 +90,12 @@ echo "   Passing: $PASSING_TASKS"
 echo "   Failing: $FAILING_TASKS"
 echo ""
 
-# Find the first incomplete task as a hint
-NEXT_INCOMPLETE=$(grep -B 2 '"passes": false' "$TESTS_JSON" | grep '"task":' | head -1 | sed 's/.*"task": "//;s/".*//')
+# Find the first incomplete task as a hint - use jq if available, else fall back to grep/sed
+if command -v jq &> /dev/null; then
+  NEXT_INCOMPLETE=$(jq -r '.features[]?.atomic_units[]? | select(.passes == false) | .task' "$TESTS_JSON" 2>/dev/null | head -1)
+else
+  NEXT_INCOMPLETE=$(grep -B 2 '"passes": false' "$TESTS_JSON" | grep '"task":' | head -1 | sed 's/.*"task": "//;s/".*//')
+fi
 
 # ============================================================================
 # PROMPT: Ask Claude to update tests.json

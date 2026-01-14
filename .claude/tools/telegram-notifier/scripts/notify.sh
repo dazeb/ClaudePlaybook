@@ -28,10 +28,13 @@ notify_task_complete() {
 }
 
 # Function to send git commit notification
+# Optimized to use single git command for commit info
 notify_git_commit() {
-    local commit_hash=$(git rev-parse --short HEAD)
-    local commit_msg=$(git log -1 --pretty=%B)
-    local author=$(git log -1 --pretty=%an)
+    # Single git log command to get hash, message, and author
+    local git_info=$(git log -1 --pretty=format:"%h%n%B%n%an")
+    local commit_hash=$(echo "$git_info" | sed -n '1p')
+    local commit_msg=$(echo "$git_info" | sed -n '2p')
+    local author=$(echo "$git_info" | sed -n '3p')
     local branch=$(git rev-parse --abbrev-ref HEAD)
 
     local message="📝 *New Commit*
@@ -47,6 +50,7 @@ $commit_msg"
 }
 
 # Function to send build status
+# Optimized to use single git command
 notify_build_status() {
     local status="$1"
     local duration="${2:-unknown}"
@@ -59,11 +63,21 @@ notify_build_status() {
         local status_text="Build Failed"
     fi
 
+    # Single git command for both branch and commit hash
+    local git_info=$(git log -1 --pretty=format:"%h%n%D")
+    local commit_hash=$(echo "$git_info" | sed -n '1p')
+    local branch=$(echo "$git_info" | sed -n '2p' | sed 's/.*HEAD -> \([^,]*\).*/\1/' | sed 's/HEAD//')
+
+    # Fallback to rev-parse if branch extraction from log fails
+    if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+        branch=$(git rev-parse --abbrev-ref HEAD)
+    fi
+
     local message="$emoji *$status_text*
 
 ⏱️ *Duration:* $duration
-🌿 *Branch:* $(git rev-parse --abbrev-ref HEAD)
-📦 *Commit:* \`$(git rev-parse --short HEAD)\`
+🌿 *Branch:* $branch
+📦 *Commit:* \`$commit_hash\`
 ⏰ *Time:* $(date '+%Y-%m-%d %H:%M:%S')"
 
     send_notification "$message"
