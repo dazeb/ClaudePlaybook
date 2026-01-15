@@ -109,6 +109,32 @@
       ]
     }
   },
+  "skills": {
+    "development": [
+      "test-driven-development",
+      "systematic-debugging",
+      "verification-before-completion"
+    ],
+    "planning": [
+      "brainstorming",
+      "writing-plans",
+      "executing-plans"
+    ],
+    "collaboration": [
+      "dispatching-parallel-agents",
+      "requesting-code-review",
+      "receiving-code-review",
+      "subagent-driven-development"
+    ],
+    "workflow": [
+      "using-git-worktrees",
+      "finishing-a-development-branch"
+    ],
+    "meta": [
+      "using-superpowers",
+      "writing-skills"
+    ]
+  },
   "features": {
     "longRunningAgents": true,
     "projectInitializer": true,
