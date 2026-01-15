@@ -4,6 +4,7 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![45 Agents](https://img.shields.io/badge/Agents-45-blue.svg)]()
+[![14 Skills](https://img.shields.io/badge/Skills-14-brightgreen.svg)](.claude/skills/README.md)
 [![Works with Claude Code](https://img.shields.io/badge/Claude_Code-Compatible-blue.svg)]()
 [![Works with OpenCode](https://img.shields.io/badge/OpenCode-Compatible-orange.svg)]()
 [![Hooks](https://img.shields.io/badge/Hooks-4_Templates-purple.svg)]()
@@ -102,11 +103,20 @@ The Project Initializer will create your entire project structure, roadmap, and 
 - **🏢 Operations** (6 agents) - Analytics, finance, support, compliance, infrastructure
 - **🧪 Testing** (5 agents) - API testing, performance, quality analysis
 
+**PLUS: 14 composable skills** that make agents systematic and quality-focused:
+
+- **🛠️ Development** - TDD, systematic debugging, verification protocols
+- **📋 Planning** - Brainstorming, plan writing, execution workflows
+- **🤝 Collaboration** - Parallel agents, code review, multi-stage review
+- **🔄 Workflow** - Git worktrees, branch management
+- **🎓 Meta** - Skills creation, usage guides
+
 Each agent knows:
 - The right tools for the job
 - Best practices and patterns
 - Common mistakes to avoid
 - When to use them vs. other approaches
+- How to apply systematic skills for quality code
 
 ---
 
@@ -805,8 +815,23 @@ We welcome contributions! Here's how to help:
 
 ## 🙏 Acknowledgments
 
+This project builds upon exceptional work from the AI agent development community:
+
+### 🎯 Core Methodology
 Built on [Anthropic's research on effective agents](https://www.anthropic.com/research/building-effective-agents) and inspired by modern DevOps practices.
+
+### 🛠️ Skills System
+The comprehensive skills system (`.claude/skills/`) is adapted from **[obra/superpowers](https://github.com/obra/superpowers)** - a battle-tested collection of systematic development methodologies including:
+- Test-Driven Development (RED-GREEN-REFACTOR cycle)
+- Systematic Debugging (four-phase root cause analysis)
+- Brainstorming & Planning workflows
+- Code Review & Collaboration protocols
+- Git Worktrees & Branch management
+
+These skills transform our agents from knowledge repositories into systematic, quality-focused development partners. Huge thanks to [@obra](https://github.com/obra) for creating and sharing this invaluable resource with the community.
+
+📚 **[Explore the skills system →](.claude/skills/README.md)**
 
 ---
 
-**Built by developers, for developers** • **MIT Licensed** • **43 Specialized Agents**
+**Built by developers, for developers** • **MIT Licensed** • **45 Specialized Agents** • **14 Composable Skills**
