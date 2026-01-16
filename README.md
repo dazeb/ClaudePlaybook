@@ -64,9 +64,9 @@ git clone https://github.com/dazeb/Long-Running-AI-Agents.git .claude
 That's it! Claude will now respond with frontend-specific best practices, modern tools, and avoid common pitfalls.
 
 <details>
-<summary>🤖 <strong>AI Setup - For AI Agents</strong></summary>
+<summary>🤖 <strong>AI Setup</strong></summary>
 
-> **Copy this section and paste it into your AI agent's context to enable these specialized agents.**
+> **Copy this WHOLE section and paste it into your AI agent's context and your AI will do the rest.**
 
 ```markdown
 # AI Agent Setup Instructions
