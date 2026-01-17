@@ -56,11 +56,11 @@ Interactive installer lets you choose which agents to install.
 ```bash
 # Clone into your project
 git clone https://github.com/dazeb/Long-Running-AI-Agents.git .claude
-
+```
+```
 # Use an agent
 # Just say: "@frontend-developer, build me a responsive navbar"
 ```
-
 That's it! Claude will now respond with frontend-specific best practices, modern tools, and avoid common pitfalls.
 
 ### Latest Updates
@@ -74,7 +74,7 @@ That's it! Claude will now respond with frontend-specific best practices, modern
 
 > **Copy this WHOLE section and paste it into your AI agent's context and your AI will do the rest.**
 
----
+````
 
 ### AI Agent Setup Instructions
 
@@ -197,12 +197,13 @@ Read and apply these skills to ensure high-quality, systematic development.
 - **14 Composable Skills** for systematic development
 - **MIT Licensed**
 
----
+````
+
 
 </details>
 
 <details>
-<summary><strong>Start Every Project Right</strong></summary>
+<summary>⚡️ <strong>Start Every Project Right</strong></summary>
 
 **We recommend starting with the [Project Initializer](.claude/agents/engineering/project-initializer.md) agent for new projects.**
 
